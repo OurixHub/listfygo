@@ -74,6 +74,11 @@ export default function App() {
     const loadUser = async () => {
       const { data } = await supabase.auth.getUser();
       setUser(data.user || null);
+      const rawGuest = await AsyncStorage.getItem('guestSession');
+      if (rawGuest) {
+        try { setGuestSession(JSON.parse(rawGuest)); } catch {}
+      }
+      setAppReady(true);
     };
 
     loadUser();
@@ -135,6 +140,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [guestSession, setGuestSession] = useState(null);
   const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState(null);
+  const [appReady, setAppReady] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState('login');
@@ -261,10 +268,7 @@ export default function App() {
             const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
             if (error || !data || !data.data_json) {
               console.error('[guestSession] fetch failed or data_json missing', { error, data });
-              setNotifBanner({
-                text: 'This shared list is not available on this device yet. Online sync is required.',
-                type: 'missing',
-              });
+              setGuestError('This shared list is not available. Try the invite link again.');
             } else {
               const raw = data.data_json;
               const fetched = {
@@ -274,10 +278,7 @@ export default function App() {
               };
               if (!fetched.id) {
                 console.error('[guestSession] fetched.id missing', raw);
-                setNotifBanner({
-                  text: 'Could not load shared list. Please try the invite link again.',
-                  type: 'missing',
-                });
+                setGuestError('Could not load shared list. Please try the invite link again.');
               } else {
                 setLocations([fetched]);
                 setActiveLocationId(fetched.id);
@@ -287,10 +288,7 @@ export default function App() {
             }
           } catch (e) {
             console.error('[guestSession] fetch threw', e);
-            setNotifBanner({
-              text: 'Could not load shared list. Please try the invite link again.',
-              type: 'missing',
-            });
+            setGuestError('Could not load shared list. Please check your connection and try again.');
           } finally {
             setGuestLoading(false);
           }
@@ -795,20 +793,38 @@ export default function App() {
     setActivity([]);
   };
 
-  if (guestLoading) {
+  if (!appReady) {
     return (
       <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: '#60a5fa', fontSize: 16, fontWeight: '700' }}>
-          Loading shared list...
-        </Text>
+        <Text style={{ color: '#334155', fontSize: 14 }}>Loading...</Text>
       </View>
     );
   }
 
-  if (guestSession && locations.length === 0) {
+  if (guestError) {
     return (
       <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
-        <Text style={{ color: '#60a5fa', fontSize: 15, fontWeight: '700', textAlign: 'center' }}>
+        <Text style={{ color: '#ef4444', fontSize: 15, fontWeight: '700', textAlign: 'center', marginBottom: 20 }}>
+          {guestError}
+        </Text>
+        <TouchableOpacity
+          onPress={async () => {
+            await AsyncStorage.removeItem('guestSession');
+            setGuestSession(null);
+            setGuestError(null);
+          }}
+          style={{ backgroundColor: '#0A1E3C', borderWidth: 1, borderColor: '#0A63FF', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 24 }}
+        >
+          <Text style={{ color: '#60a5fa', fontWeight: '800' }}>Back to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (guestLoading || (guestSession && locations.length === 0)) {
+    return (
+      <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={{ color: '#60a5fa', fontSize: 16, fontWeight: '700' }}>
           Loading shared list...
         </Text>
       </View>
