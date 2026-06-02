@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Dimensions,
   Image,
   ScrollView,
   Share,
@@ -19,6 +20,11 @@ import { supabase } from '../../lib/supabase';
 const STORAGE_KEY = 'shopix_clean_v2';
 
 const uid = () => `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+const { width: screenWidth } = Dimensions.get('window');
+const logoWidth = Math.min(screenWidth * 0.70, 460);
+const logoHeight = logoWidth * 0.38;
+const topBarHeight = logoHeight + 20;
 
 const SECTORS = [
   { key: 'general', color: '#64748b' },
@@ -862,95 +868,45 @@ export default function App() {
       <View style={styles.header}>
         <View style={styles.topBar}>
 
-          {/* Row 1: menu left, bell right */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <TouchableOpacity
+            onPress={() => setShowMenu(!showMenu)}
+            style={styles.topButton}
+          >
+            <Text style={styles.topButtonText}>☰</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setShowMenu(!showMenu)}
-              style={styles.topButton}
-            >
-              <Text style={styles.topButtonText}>☰</Text>
-            </TouchableOpacity>
-
-            <View style={styles.presenceBar}>
-
-              <TouchableOpacity
-                onPress={() => setShowPresencePanel(!showPresencePanel)}
-                style={styles.presenceUsers}
-              >
-              {firstOwner && (
-                <View style={[styles.userBubble, styles.ownerBubble]}>
-                  <Text style={styles.userBubbleText}>O</Text>
-                </View>
-              )}
-
-              {firstWriter && (
-                <View style={[
-                  styles.userBubble,
-                  firstWriter.online ? styles.writerBubble : styles.offlineBubble
-                ]}>
-                  <Text style={styles.userBubbleText}>W</Text>
-                </View>
-              )}
-
-              {firstShopper && (
-                <View style={[
-                  styles.userBubble,
-                  firstShopper.online ? styles.shopperBubble : styles.offlineBubble
-                ]}>
-                  <Text style={styles.userBubbleText}>S</Text>
-
-                  {extraShoppers > 0 && (
-                    <View style={styles.extraBadge}>
-                      <Text style={styles.extraBadgeText}>+{extraShoppers}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{ marginLeft: 10 }}
-              onPress={() => {
-                setShowNotifPanel(v => !v);
-                setShowPresencePanel(false);
-                if (!showNotifPanel) {
-                  setNotifications(prev => prev.map(n =>
-                    visibleNotifs.some(vn => vn.id === n.id) ? { ...n, read: true } : n
-                  ));
-                }
-              }}
-            >
-              <View style={styles.bellButton}>
-                <Text style={styles.bellText}>🔔</Text>
-                {unreadCount > 0 && (
-                  <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#ef4444', borderRadius: 999, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
-                    <Text style={{ color: 'white', fontSize: 10, fontWeight: '900' }}>{unreadCount}</Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-
-            </View>{/* end presenceBar */}
-          </View>{/* end row 1 */}
-
-          {/* Row 2: logo centered */}
-          <View style={{ alignItems: 'center', paddingVertical: 6 }}>
+          <View style={styles.logoWrap}>
             <Image
               source={require('../../assets/images/listfygo-logo.png')}
-              style={styles.headerLogo}
+              style={{ width: logoWidth, height: logoHeight }}
               resizeMode="contain"
             />
-          </View>
-
-          {/* Row 3: guest label */}
-          {guestSession && (
-            <View style={{ alignItems: 'center', paddingBottom: 6 }}>
-              <Text style={{ color: '#f59e0b', fontSize: 11, fontWeight: '700' }}>
+            {guestSession && (
+              <Text style={{ color: '#f59e0b', fontSize: 10, fontWeight: '700', marginTop: 2 }}>
                 Guest mode: {guestSession.role}
               </Text>
-            </View>
-          )}
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={styles.bellButton}
+            onPress={() => {
+              setShowNotifPanel(v => !v);
+              setShowPresencePanel(false);
+              if (!showNotifPanel) {
+                setNotifications(prev => prev.map(n =>
+                  visibleNotifs.some(vn => vn.id === n.id) ? { ...n, read: true } : n
+                ));
+              }
+            }}
+          >
+            <Text style={styles.bellText}>🔔</Text>
+            {unreadCount > 0 && (
+              <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: '#ef4444', borderRadius: 999, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+                <Text style={{ color: 'white', fontSize: 10, fontWeight: '900' }}>{unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
         </View>
         {showMenu && (
@@ -2743,9 +2699,12 @@ export default function App() {
 
 const styles = StyleSheet.create({
   topBar: {
-    flexDirection: 'column',
-    paddingTop: 10,
-    paddingHorizontal: 12,
+    height: topBarHeight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 0,
     marginBottom: 20,
     backgroundColor: '#071B38',
     borderBottomWidth: 1,
@@ -2756,14 +2715,31 @@ const styles = StyleSheet.create({
   },
 
   topButton: {
-    width: 42,
-    height: 42,
+    width: 56,
+    height: 56,
     borderRadius: 12,
     backgroundColor: '#0b1728',
     borderWidth: 1,
     borderColor: '#1d3557',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  logoWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  bellButton: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  bellText: {
+    fontSize: 22,
   },
 
   topButtonText: {
@@ -2812,10 +2788,6 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '900',
     letterSpacing: 1,
-  },
-  headerLogo: {
-    width: 720,
-    height: 250,
   },
   subtitle: {
     color: '#94a3b8',
