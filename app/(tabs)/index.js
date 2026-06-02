@@ -862,32 +862,22 @@ export default function App() {
       <View style={styles.header}>
         <View style={styles.topBar}>
 
-          <TouchableOpacity
-            onPress={() => setShowMenu(!showMenu)}
-            style={styles.topButton}
-          >
-            <Text style={styles.topButtonText}>☰</Text>
-          </TouchableOpacity>
-
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Image
-              source={require('../../assets/images/listfygo-logo.png')}
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
-            {guestSession && (
-              <Text style={{ color: '#f59e0b', fontSize: 10, fontWeight: '700', marginTop: 2 }}>
-                Guest mode: {guestSession.role}
-              </Text>
-            )}
-          </View>
-
-          <View style={styles.presenceBar}>
+          {/* Row 1: menu left, bell right */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
 
             <TouchableOpacity
-              onPress={() => setShowPresencePanel(!showPresencePanel)}
-              style={styles.presenceUsers}
+              onPress={() => setShowMenu(!showMenu)}
+              style={styles.topButton}
             >
+              <Text style={styles.topButtonText}>☰</Text>
+            </TouchableOpacity>
+
+            <View style={styles.presenceBar}>
+
+              <TouchableOpacity
+                onPress={() => setShowPresencePanel(!showPresencePanel)}
+                style={styles.presenceUsers}
+              >
               {firstOwner && (
                 <View style={[styles.userBubble, styles.ownerBubble]}>
                   <Text style={styles.userBubbleText}>O</Text>
@@ -941,7 +931,26 @@ export default function App() {
               </View>
             </TouchableOpacity>
 
+            </View>{/* end presenceBar */}
+          </View>{/* end row 1 */}
+
+          {/* Row 2: logo centered */}
+          <View style={{ alignItems: 'center', paddingVertical: 6 }}>
+            <Image
+              source={require('../../assets/images/listfygo-logo.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
           </View>
+
+          {/* Row 3: guest label */}
+          {guestSession && (
+            <View style={{ alignItems: 'center', paddingBottom: 6 }}>
+              <Text style={{ color: '#f59e0b', fontSize: 11, fontWeight: '700' }}>
+                Guest mode: {guestSession.role}
+              </Text>
+            </View>
+          )}
 
         </View>
         {showMenu && (
@@ -2734,10 +2743,9 @@ export default function App() {
 
 const styles = StyleSheet.create({
   topBar: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    paddingTop: 10,
+    paddingHorizontal: 12,
     marginBottom: 20,
     backgroundColor: '#071B38',
     borderBottomWidth: 1,
@@ -2806,8 +2814,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   headerLogo: {
-    width: 160,
-    height: 40,
+    width: 320,
+    height: 90,
   },
   subtitle: {
     color: '#94a3b8',
