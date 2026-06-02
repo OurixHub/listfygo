@@ -260,6 +260,7 @@ export default function App() {
             );
             const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
             if (error || !data || !data.data_json) {
+              console.error('[guestSession] fetch failed or data_json missing', { error, data });
               setNotifBanner({
                 text: 'This shared list is not available on this device yet. Online sync is required.',
                 type: 'missing',
@@ -272,6 +273,7 @@ export default function App() {
                 sectors: Array.isArray(raw.sectors) ? raw.sectors : [],
               };
               if (!fetched.id) {
+                console.error('[guestSession] fetched.id missing', raw);
                 setNotifBanner({
                   text: 'Could not load shared list. Please try the invite link again.',
                   type: 'missing',
@@ -283,7 +285,8 @@ export default function App() {
                 setSharedListIds([fetched.id]);
               }
             }
-          } catch {
+          } catch (e) {
+            console.error('[guestSession] fetch threw', e);
             setNotifBanner({
               text: 'Could not load shared list. Please try the invite link again.',
               type: 'missing',
@@ -796,6 +799,16 @@ export default function App() {
     return (
       <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={{ color: '#60a5fa', fontSize: 16, fontWeight: '700' }}>
+          Loading shared list...
+        </Text>
+      </View>
+    );
+  }
+
+  if (guestSession && locations.length === 0) {
+    return (
+      <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
+        <Text style={{ color: '#60a5fa', fontSize: 15, fontWeight: '700', textAlign: 'center' }}>
           Loading shared list...
         </Text>
       </View>
@@ -1991,9 +2004,18 @@ export default function App() {
               <View style={styles.inviteActions}>
                 <TouchableOpacity
                   style={[styles.inviteActionButton, styles.copyButton]}
-                  onPress={() => {
+                  onPress={async () => {
                     const inviteLink = `https://listfygo.com/invite?role=${inviteRole}&listId=${activeLocationId}`;
-                    Alert.alert('Copy not available', 'expo-clipboard is not installed. Use Share Link instead.');
+                    try {
+                      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+                        await navigator.clipboard.writeText(inviteLink);
+                        Alert.alert('Copied', 'Invite link copied to clipboard.');
+                      } else {
+                        Alert.alert('Copy not available', 'Use Share Link to send the invite.');
+                      }
+                    } catch (e) {
+                      Alert.alert('Copy failed', 'Use Share Link instead.');
+                    }
                   }}
                 >
                   <Text style={styles.inviteActionText}>Copy link</Text>
@@ -2004,7 +2026,7 @@ export default function App() {
                   onPress={async () => {
                     const inviteLink = `https://listfygo.com/invite?role=${inviteRole}&listId=${activeLocationId}`;
                     try {
-                      await Share.share({ message: inviteLink, url: inviteLink, title: 'ListfyGo invite' });
+                      await Share.share({ message: inviteLink, title: 'ListfyGo invite' });
                     } catch (e) {
                       Alert.alert('Error', e.message);
                     }
