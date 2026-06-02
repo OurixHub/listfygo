@@ -292,6 +292,8 @@ export default function App() {
           } finally {
             setGuestLoading(false);
           }
+        } else {
+          setGuestError('This invite link is incomplete. Please use the full invite link.');
         }
 
         const key = role === 'writer' ? 'writers' : role === 'shopper' ? 'shoppers' : 'viewers';
