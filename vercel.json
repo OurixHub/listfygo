@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/invite",
+      "destination": "/"
+    },
+    {
+      "source": "/invite/:path*",
+      "destination": "/"
+    }
+  ]
+}
