@@ -260,13 +260,19 @@ export default function App() {
             }
             // Not found locally — fetch from Supabase
             setGuestLoading(true);
+            const timeout = setTimeout(() => {
+              setGuestLoading(false);
+              setNotifBanner({
+                text: 'Could not load shared list. Please try the invite link again.',
+                type: 'missing',
+              });
+            }, 10000);
             supabase
               .from('shared_lists')
               .select('*')
               .eq('id', listId)
               .single()
               .then(({ data, error }) => {
-                setGuestLoading(false);
                 if (error || !data) {
                   setNotifBanner({
                     text: 'This shared list is not available on this device yet. Online sync is required.',
@@ -279,6 +285,16 @@ export default function App() {
                 setActiveLocationId(fetched.id);
                 setActiveSectorId(fetched.sectors?.[0]?.id || null);
                 setSharedListIds([fetched.id]);
+              })
+              .catch(() => {
+                setNotifBanner({
+                  text: 'Could not load shared list. Please try the invite link again.',
+                  type: 'missing',
+                });
+              })
+              .finally(() => {
+                clearTimeout(timeout);
+                setGuestLoading(false);
               });
             return prev;
           });
