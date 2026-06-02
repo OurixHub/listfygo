@@ -2078,6 +2078,42 @@ export default function App() {
         </View>
       )
       }
+      {mockRole === 'writer' && activeLocation && (
+        <TouchableOpacity
+          onPress={async () => {
+            try {
+              await supabase.from('shared_lists').upsert({
+                id: activeLocation.id,
+                owner_id: null,
+                name: activeLocation.name,
+                data_json: activeLocation,
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'id' });
+            } catch {
+              // silently ignore — link still works
+            }
+            Alert.alert('List saved', 'You can now send it to the shopper.');
+            setInviteRole('shopper');
+            setShowSharingCenter(false);
+            setShowInviteBox(true);
+          }}
+          style={{
+            backgroundColor: '#0A1E3C',
+            borderWidth: 1,
+            borderColor: '#0A63FF',
+            borderRadius: 12,
+            paddingVertical: 14,
+            alignItems: 'center',
+            marginTop: 16,
+            marginBottom: 4,
+          }}
+        >
+          <Text style={{ color: '#60a5fa', fontWeight: '900', fontSize: 15 }}>
+            Save and Send to Shopper
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {
         activity.length > 0 && (
           <View style={{ marginTop: 20 }}>
