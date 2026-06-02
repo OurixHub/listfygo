@@ -259,17 +259,29 @@ export default function App() {
               setTimeout(() => reject(new Error('timeout')), 10000)
             );
             const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-            if (error || !data) {
+            if (error || !data || !data.data_json) {
               setNotifBanner({
                 text: 'This shared list is not available on this device yet. Online sync is required.',
                 type: 'missing',
               });
             } else {
-              const fetched = data.data_json;
-              setLocations([fetched]);
-              setActiveLocationId(fetched.id);
-              setActiveSectorId(fetched.sectors?.[0]?.id || null);
-              setSharedListIds([fetched.id]);
+              const raw = data.data_json;
+              const fetched = {
+                ...raw,
+                id: raw.id || listId,
+                sectors: Array.isArray(raw.sectors) ? raw.sectors : [],
+              };
+              if (!fetched.id) {
+                setNotifBanner({
+                  text: 'Could not load shared list. Please try the invite link again.',
+                  type: 'missing',
+                });
+              } else {
+                setLocations([fetched]);
+                setActiveLocationId(fetched.id);
+                setActiveSectorId(fetched.sectors[0]?.id || null);
+                setSharedListIds([fetched.id]);
+              }
             }
           } catch {
             setNotifBanner({
