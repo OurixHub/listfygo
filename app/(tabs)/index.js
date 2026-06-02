@@ -869,7 +869,7 @@ export default function App() {
             <Text style={styles.topButtonText}>☰</Text>
           </TouchableOpacity>
 
-          <View style={{ alignItems: 'center' }}>
+          <View style={{ flex: 1, alignItems: 'center' }}>
             <Image
               source={require('../../assets/images/listfygo-logo.png')}
               style={styles.headerLogo}
@@ -2806,8 +2806,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   headerLogo: {
-    width: 600,
-    height: 250,
+    width: 160,
+    height: 40,
   },
   subtitle: {
     color: '#94a3b8',
