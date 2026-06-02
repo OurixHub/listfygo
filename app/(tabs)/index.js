@@ -1973,42 +1973,6 @@ export default function App() {
                 </View>
               )}
 
-              <View style={{ marginBottom: 10, alignItems: 'center' }}>
-                <Text style={{ color: '#64748b', fontSize: 11, textAlign: 'center', marginBottom: 6 }}>
-                  Simulate opening invite as:
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    const key = inviteRole === 'writer' ? 'writers' : inviteRole === 'shopper' ? 'shoppers' : 'viewers';
-                    setHouseholdMembers(prev => {
-                      const list = [...prev[key]];
-                      for (let i = list.length - 1; i >= 0; i--) {
-                        if (list[i].status === 'Pending Invite' || list[i].status === 'Connected') {
-                          list[i] = { ...list[i], status: 'Live' };
-                          break;
-                        }
-                      }
-                      return { ...prev, [key]: list };
-                    });
-                    setMockRole(inviteRole);
-                    setShowInviteBox(false);
-                    setShowSharingCenter(true);
-                  }}
-                  style={{
-                    backgroundColor: '#0A1E3C',
-                    borderWidth: 1,
-                    borderColor: '#0A63FF',
-                    borderRadius: 8,
-                    paddingHorizontal: 10,
-                    paddingVertical: 6,
-                  }}
-                >
-                  <Text style={{ color: '#60a5fa', fontWeight: '800', fontSize: 12 }}>
-                    Open as {inviteRole ? inviteRole[0].toUpperCase() + inviteRole.slice(1) : ''}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
               <View style={styles.inviteActions}>
                 <TouchableOpacity
                   style={[styles.inviteActionButton, styles.copyButton]}
@@ -2034,27 +1998,6 @@ export default function App() {
                   <Text style={styles.inviteActionText}>Share link</Text>
                 </TouchableOpacity>
               </View>
-
-              <TouchableOpacity
-                style={[styles.inviteActionButton, styles.copyButton, { marginBottom: 10 }]}
-                onPress={() => {
-                  const key = inviteRole === 'writer' ? 'writers' : inviteRole === 'shopper' ? 'shoppers' : 'viewers';
-                  setHouseholdMembers(prev => {
-                    const list = [...prev[key]];
-                    for (let i = list.length - 1; i >= 0; i--) {
-                      if (list[i].status === 'Pending Invite') {
-                        list[i] = { ...list[i], status: 'Connected' };
-                        break;
-                      }
-                    }
-                    return { ...prev, [key]: list };
-                  });
-                  setShowInviteBox(false);
-                  setShowSharingCenter(true);
-                }}
-              >
-                <Text style={styles.inviteActionText}>Accept Invite</Text>
-              </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.closeButton}
