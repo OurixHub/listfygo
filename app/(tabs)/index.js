@@ -127,6 +127,7 @@ export default function App() {
   const [newSectorName, setNewSectorName] = useState('');
   const [movingItem, setMovingItem] = useState(null);
   const [user, setUser] = useState(null);
+  const [guestSession, setGuestSession] = useState(null);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState('login');
@@ -205,23 +206,22 @@ export default function App() {
     load();
   }, []);
 
-  // Consume accepted invite from /invite route
+  // Load guestSession and apply role/list on mount
   useEffect(() => {
-    const applyPendingInvite = async () => {
+    const applyGuestSession = async () => {
       try {
-        const raw = await AsyncStorage.getItem('pendingInvite');
+        const raw = await AsyncStorage.getItem('guestSession');
         if (!raw) return;
-        const { role, listId } = JSON.parse(raw);
-        await AsyncStorage.removeItem('pendingInvite');
-
+        const session = JSON.parse(raw);
+        const { role, listId } = session;
         if (!role) return;
 
-        // Switch mock role
+        setGuestSession(session);
+
         if (['writer', 'shopper', 'viewer'].includes(role)) {
           setMockRole(role);
         }
 
-        // Open the list if it exists locally
         if (listId) {
           setLocations(prev => {
             const match = prev.find(l => l.id === listId);
@@ -237,7 +237,6 @@ export default function App() {
           });
         }
 
-        // Mark a matching pending member as Live
         const key = role === 'writer' ? 'writers' : role === 'shopper' ? 'shoppers' : 'viewers';
         setHouseholdMembers(prev => {
           const list = [...prev[key]];
@@ -253,7 +252,7 @@ export default function App() {
         // silently ignore
       }
     };
-    applyPendingInvite();
+    applyGuestSession();
   }, []);
 
   useEffect(() => {
@@ -726,7 +725,7 @@ export default function App() {
     setActivity([]);
   };
 
-  if (!user) {
+  if (!user && !guestSession) {
     return (
       <View style={styles.screen}>
         <View style={{ padding: 20, marginTop: 80 }}>
@@ -814,11 +813,18 @@ export default function App() {
             <Text style={styles.topButtonText}>☰</Text>
           </TouchableOpacity>
 
-          <Image
-            source={require('../../assets/images/listfygo-logo.png')}
-            style={styles.headerLogo}
-            resizeMode="contain"
-          />
+          <View style={{ alignItems: 'center' }}>
+            <Image
+              source={require('../../assets/images/listfygo-logo.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            {guestSession && (
+              <Text style={{ color: '#f59e0b', fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                Guest mode: {guestSession.role}
+              </Text>
+            )}
+          </View>
 
           <View style={styles.presenceBar}>
 
@@ -980,11 +986,18 @@ export default function App() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={async () => {
-                await supabase.auth.signOut();
+                if (guestSession) {
+                  await AsyncStorage.removeItem('guestSession');
+                  setGuestSession(null);
+                } else {
+                  await supabase.auth.signOut();
+                }
+                setMockRole('owner');
+                setShowMenu(false);
               }}
             >
               <Text style={[styles.menuItemText, { color: '#ef4444' }]}>
-                Logout
+                {guestSession ? 'Exit guest mode' : 'Logout'}
               </Text>
             </TouchableOpacity>
 

@@ -13,8 +13,13 @@ export default function InviteScreen() {
   const handleAccept = async () => {
     setAccepting(true);
     await AsyncStorage.setItem(
-      'pendingInvite',
-      JSON.stringify({ role, listId, acceptedAt: new Date().toISOString() })
+      'guestSession',
+      JSON.stringify({
+        guestId: `guest_${Date.now()}`,
+        role,
+        listId,
+        acceptedAt: new Date().toISOString(),
+      })
     );
     router.replace('/');
   };
