@@ -205,6 +205,57 @@ export default function App() {
     load();
   }, []);
 
+  // Consume accepted invite from /invite route
+  useEffect(() => {
+    const applyPendingInvite = async () => {
+      try {
+        const raw = await AsyncStorage.getItem('pendingInvite');
+        if (!raw) return;
+        const { role, listId } = JSON.parse(raw);
+        await AsyncStorage.removeItem('pendingInvite');
+
+        if (!role) return;
+
+        // Switch mock role
+        if (['writer', 'shopper', 'viewer'].includes(role)) {
+          setMockRole(role);
+        }
+
+        // Open the list if it exists locally
+        if (listId) {
+          setLocations(prev => {
+            const match = prev.find(l => l.id === listId);
+            if (match) {
+              setActiveLocationId(listId);
+            } else {
+              setNotifBanner({
+                text: 'This shared list is not available on this device yet. Online sync is required.',
+                type: 'missing',
+              });
+            }
+            return prev;
+          });
+        }
+
+        // Mark a matching pending member as Live
+        const key = role === 'writer' ? 'writers' : role === 'shopper' ? 'shoppers' : 'viewers';
+        setHouseholdMembers(prev => {
+          const list = [...prev[key]];
+          for (let i = list.length - 1; i >= 0; i--) {
+            if (list[i].status === 'Pending Invite' || list[i].status === 'Connected') {
+              list[i] = { ...list[i], status: 'Live' };
+              break;
+            }
+          }
+          return { ...prev, [key]: list };
+        });
+      } catch {
+        // silently ignore
+      }
+    };
+    applyPendingInvite();
+  }, []);
+
   useEffect(() => {
     AsyncStorage.setItem(
       STORAGE_KEY,
