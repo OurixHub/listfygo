@@ -248,7 +248,6 @@ export default function App() {
         const raw = await AsyncStorage.getItem('guestSession');
         if (!raw) return;
         const session = JSON.parse(raw);
-        console.log('[TRACE-1] guestSession:', JSON.stringify(session));
         const { role, listId } = session;
         if (!role) return;
 
@@ -267,13 +266,11 @@ export default function App() {
               setTimeout(() => reject(new Error('timeout')), 10000)
             );
             const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-            console.log('[TRACE-2] supabase result:', JSON.stringify({ error: error?.message ?? null, hasData: !!data, keys: data ? Object.keys(data) : null }));
             if (error || !data || !data.data_json) {
               console.error('[guestSession] fetch failed or data_json missing', { error, data });
               setGuestError('This shared list is not available. Try the invite link again.');
             } else {
               const raw = data.data_json;
-              console.log('[TRACE-3] data_json keys:', Object.keys(raw), '| id:', raw.id, '| sectors type:', typeof raw.sectors, Array.isArray(raw.sectors) ? 'length:' + raw.sectors.length : '(not array)');
               const fetched = {
                 ...raw,
                 id: raw.id || listId,
@@ -283,13 +280,10 @@ export default function App() {
                 console.error('[guestSession] fetched.id missing', raw);
                 setGuestError('Could not load shared list. Please try the invite link again.');
               } else {
-                console.log('[TRACE-4] fetched.id:', fetched.id, '| sectors:', fetched.sectors.length, '| keys:', Object.keys(fetched));
-                console.log('[TRACE-5] setting activeLocationId to:', fetched.id);
                 setLocations([fetched]);
                 setActiveLocationId(fetched.id);
                 setActiveSectorId(fetched.sectors[0]?.id || null);
                 setSharedListIds([fetched.id]);
-                console.log('[TRACE-6] setLocations called with 1 location, id:', fetched.id);
               }
             }
           } catch (e) {
@@ -345,6 +339,8 @@ export default function App() {
     () => locations.find((loc) => loc.id === activeLocationId) || null,
     [locations, activeLocationId]
   );
+
+  const safeActiveLocation = activeLocation && Array.isArray(activeLocation.sectors) ? activeLocation : null;
 
   const addLocation = () => {
     const cleanName = locationName.trim();
@@ -694,7 +690,7 @@ export default function App() {
     return location.sectors.reduce((locSum, sector) => {
       return (
         locSum +
-        sector.items.reduce((sectorSum, item) => {
+        (sector.items || []).reduce((sectorSum, item) => {
           if (item.status !== 'cart') return sectorSum;
           return sectorSum + itemTotal(item);
         }, 0)
@@ -839,6 +835,26 @@ export default function App() {
     );
   }
 
+  if (guestSession && locations.length > 0 && !safeActiveLocation) {
+    return (
+      <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
+        <Text style={{ color: '#ef4444', fontSize: 15, fontWeight: '700', textAlign: 'center', marginBottom: 20 }}>
+          Could not open this shared list. Please ask the owner to send a new invite link.
+        </Text>
+        <TouchableOpacity
+          onPress={async () => {
+            await AsyncStorage.removeItem('guestSession');
+            setGuestSession(null);
+            setGuestError(null);
+          }}
+          style={{ backgroundColor: '#0A1E3C', borderWidth: 1, borderColor: '#0A63FF', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 24 }}
+        >
+          <Text style={{ color: '#60a5fa', fontWeight: '800' }}>Back to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   if (!user && !guestSession) {
     return (
       <View style={styles.screen}>
@@ -913,8 +929,6 @@ export default function App() {
     return false;
   });
   const unreadCount = visibleNotifs.filter(n => !n.read).length;
-
-  console.log('[TRACE-7] main render reached | guestSession:', !!guestSession, '| locations.length:', locations.length, '| activeLocationId:', activeLocationId, '| activeLocation:', activeLocation ? activeLocation.id : null);
 
   return (
 
@@ -1272,7 +1286,7 @@ export default function App() {
         </ScrollView>
       )}
 
-      {activeLocation ? (
+      {safeActiveLocation ? (
         <View style={styles.locationPanel}>
           <View style={[styles.locationTopLine, { backgroundColor: activeLocation.color }]} />
 
@@ -1473,7 +1487,7 @@ export default function App() {
           {activeLocation.sectors.map((sector) => {
             if (sector.id !== activeSectorId) return null;
 
-            const visibleItems = sector.items;
+            const visibleItems = Array.isArray(sector.items) ? sector.items : [];
 
             return (
               <View key={sector.id} style={styles.sectorBlock}>
