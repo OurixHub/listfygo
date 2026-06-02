@@ -2814,8 +2814,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   headerLogo: {
-    width: 320,
-    height: 90,
+    width: 720,
+    height: 250,
   },
   subtitle: {
     color: '#94a3b8',
