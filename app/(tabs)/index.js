@@ -1006,21 +1006,29 @@ export default function App() {
               </Text>
               <View style={styles.householdCard}>
 
-                <Text style={styles.householdTitle}>
-                  {householdName}
-                </Text>
+                {guestSession ? (
+                  <Text style={[styles.householdTitle, { color: '#f59e0b' }]}>
+                    Guest {guestSession.role ? guestSession.role[0].toUpperCase() + guestSession.role.slice(1) : ''}
+                  </Text>
+                ) : (
+                  <>
+                    <Text style={styles.householdTitle}>
+                      {householdName}
+                    </Text>
 
-                <Text style={styles.householdText}>Owner · {profileName}</Text>
+                    <Text style={styles.householdText}>Owner · {profileName}</Text>
 
-                {householdMembers.writers.map(m => (
-                  <Text key={m.id} style={styles.householdText}>Writer · {m.name} · {m.status}</Text>
-                ))}
-                {householdMembers.shoppers.map(m => (
-                  <Text key={m.id} style={styles.householdText}>Shopper · {m.name} · {m.status}</Text>
-                ))}
-                {householdMembers.viewers.map(m => (
-                  <Text key={m.id} style={styles.householdText}>Viewer · {m.name} · {m.status}</Text>
-                ))}
+                    {householdMembers.writers.map(m => (
+                      <Text key={m.id} style={styles.householdText}>Writer · {m.name} · {m.status}</Text>
+                    ))}
+                    {householdMembers.shoppers.map(m => (
+                      <Text key={m.id} style={styles.householdText}>Shopper · {m.name} · {m.status}</Text>
+                    ))}
+                    {householdMembers.viewers.map(m => (
+                      <Text key={m.id} style={styles.householdText}>Viewer · {m.name} · {m.status}</Text>
+                    ))}
+                  </>
+                )}
 
               </View>
             </View>
