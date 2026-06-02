@@ -154,6 +154,7 @@ export default function App() {
   const [replacementDraft, setReplacementDraft] = useState('');
   const [inviteRole, setInviteRole] = useState(null);
   const [showInviteBox, setShowInviteBox] = useState(false);
+  const [sharedListIds, setSharedListIds] = useState([]);
   const [showInviteFeedback, setShowInviteFeedback] = useState(false);
   const [inviteFeedbackDraft, setInviteFeedbackDraft] = useState('');
   const [showSharingCenter, setShowSharingCenter] = useState(false);
@@ -206,6 +207,28 @@ export default function App() {
     load();
   }, []);
 
+  // Upsert active list to Supabase whenever invite panel opens
+  useEffect(() => {
+    if (!showInviteBox || !activeLocation) return;
+    const upsertSharedList = async () => {
+      try {
+        await supabase.from('shared_lists').upsert({
+          id: activeLocation.id,
+          owner_id: user?.id || null,
+          name: activeLocation.name,
+          data_json: activeLocation,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+        setSharedListIds(prev =>
+          prev.includes(activeLocation.id) ? prev : [...prev, activeLocation.id]
+        );
+      } catch {
+        // silently ignore — invite still works locally
+      }
+    };
+    upsertSharedList();
+  }, [showInviteBox]);
+
   // Load guestSession and apply role/list on mount
   useEffect(() => {
     const applyGuestSession = async () => {
@@ -227,12 +250,34 @@ export default function App() {
             const match = prev.find(l => l.id === listId);
             if (match) {
               setActiveLocationId(listId);
-            } else {
-              setNotifBanner({
-                text: 'This shared list is not available on this device yet. Online sync is required.',
-                type: 'missing',
-              });
+              setActiveSectorId(match.sectors?.[0]?.id || null);
+              return prev;
             }
+            // Not found locally — fetch from Supabase
+            supabase
+              .from('shared_lists')
+              .select('*')
+              .eq('id', listId)
+              .single()
+              .then(({ data, error }) => {
+                if (error || !data) {
+                  setNotifBanner({
+                    text: 'This shared list is not available on this device yet. Online sync is required.',
+                    type: 'missing',
+                  });
+                  return;
+                }
+                const fetched = data.data_json;
+                setLocations(current => {
+                  if (current.find(l => l.id === fetched.id)) return current;
+                  return [...current, fetched];
+                });
+                setActiveLocationId(fetched.id);
+                setActiveSectorId(fetched.sectors?.[0]?.id || null);
+                setSharedListIds(ids =>
+                  ids.includes(fetched.id) ? ids : [...ids, fetched.id]
+                );
+              });
             return prev;
           });
         }
@@ -258,11 +303,22 @@ export default function App() {
   useEffect(() => {
     AsyncStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({
-        locations,
-        receipts
-      })
+      JSON.stringify({ locations, receipts })
     ).catch(() => { });
+
+    // Sync any shared lists back to Supabase
+    if (sharedListIds.length > 0) {
+      locations.forEach(loc => {
+        if (!sharedListIds.includes(loc.id)) return;
+        supabase.from('shared_lists').upsert({
+          id: loc.id,
+          owner_id: user?.id || null,
+          name: loc.name,
+          data_json: loc,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' }).catch(() => { });
+      });
+    }
   }, [locations, receipts]);
 
   const activeLocation = useMemo(
