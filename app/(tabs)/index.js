@@ -2715,14 +2715,10 @@ const styles = StyleSheet.create({
   },
 
   topButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: '#0b1728',
-    borderWidth: 1,
-    borderColor: '#1d3557',
-    justifyContent: 'center',
+    width: 44,
+    height: 44,
     alignItems: 'center',
+    justifyContent: 'center',
   },
 
   logoWrap: {
@@ -2743,9 +2739,8 @@ const styles = StyleSheet.create({
   },
 
   topButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '900',
+    color: '#FFFFFF',
+    fontSize: 28,
   },
 
   presenceBar: {
