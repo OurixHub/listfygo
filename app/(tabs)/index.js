@@ -189,18 +189,16 @@ export default function App() {
   useEffect(() => {
     const load = async () => {
       try {
-
-
+        const rawGuest = await AsyncStorage.getItem('guestSession');
+        if (rawGuest) return; // guest: skip old local lists, applyGuestSession handles it
 
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) {
-            // formato antigo
             setLocations(parsed);
             setReceipts([]);
           } else if (parsed.locations) {
-            // formato novo
             setLocations(parsed.locations);
             setReceipts(parsed.receipts || []);
           }
@@ -255,9 +253,9 @@ export default function App() {
           setLocations(prev => {
             const match = prev.find(l => l.id === listId);
             if (match) {
-              setActiveLocationId(listId);
+              setActiveLocationId(match.id);
               setActiveSectorId(match.sectors?.[0]?.id || null);
-              return prev;
+              return [match]; // show only the invited list
             }
             // Not found locally — fetch from Supabase
             supabase
@@ -274,15 +272,10 @@ export default function App() {
                   return;
                 }
                 const fetched = data.data_json;
-                setLocations(current => {
-                  if (current.find(l => l.id === fetched.id)) return current;
-                  return [...current, fetched];
-                });
+                setLocations([fetched]);
                 setActiveLocationId(fetched.id);
                 setActiveSectorId(fetched.sectors?.[0]?.id || null);
-                setSharedListIds(ids =>
-                  ids.includes(fetched.id) ? ids : [...ids, fetched.id]
-                );
+                setSharedListIds([fetched.id]);
               });
             return prev;
           });
