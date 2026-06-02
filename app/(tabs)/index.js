@@ -134,6 +134,7 @@ export default function App() {
   const [movingItem, setMovingItem] = useState(null);
   const [user, setUser] = useState(null);
   const [guestSession, setGuestSession] = useState(null);
+  const [guestLoading, setGuestLoading] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState('login');
@@ -258,12 +259,14 @@ export default function App() {
               return [match]; // show only the invited list
             }
             // Not found locally — fetch from Supabase
+            setGuestLoading(true);
             supabase
               .from('shared_lists')
               .select('*')
               .eq('id', listId)
               .single()
               .then(({ data, error }) => {
+                setGuestLoading(false);
                 if (error || !data) {
                   setNotifBanner({
                     text: 'This shared list is not available on this device yet. Online sync is required.',
@@ -779,6 +782,16 @@ export default function App() {
     clearDraft();
     setActivity([]);
   };
+
+  if (guestLoading) {
+    return (
+      <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={{ color: '#60a5fa', fontSize: 16, fontWeight: '700' }}>
+          Loading shared list...
+        </Text>
+      </View>
+    );
+  }
 
   if (!user && !guestSession) {
     return (
@@ -2756,6 +2769,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
   },
+  headerLogo: {
+    width: 220,
+    height: 60,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+
   subtitle: {
     color: '#94a3b8',
     marginTop: 2,
