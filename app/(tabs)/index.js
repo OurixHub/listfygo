@@ -245,59 +245,40 @@ export default function App() {
         if (!role) return;
 
         setGuestSession(session);
-
-        if (['writer', 'shopper', 'viewer'].includes(role)) {
-          setMockRole(role);
-        }
+        if (['writer', 'shopper', 'viewer'].includes(role)) setMockRole(role);
 
         if (listId) {
-          setLocations(prev => {
-            const match = prev.find(l => l.id === listId);
-            if (match) {
-              setActiveLocationId(match.id);
-              setActiveSectorId(match.sectors?.[0]?.id || null);
-              return [match]; // show only the invited list
-            }
-            // Not found locally — fetch from Supabase
-            setGuestLoading(true);
-            const timeout = setTimeout(() => {
-              setGuestLoading(false);
-              setNotifBanner({
-                text: 'Could not load shared list. Please try the invite link again.',
-                type: 'missing',
-              });
-            }, 10000);
-            supabase
+          setGuestLoading(true);
+          try {
+            const fetchPromise = supabase
               .from('shared_lists')
               .select('*')
               .eq('id', listId)
-              .single()
-              .then(({ data, error }) => {
-                if (error || !data) {
-                  setNotifBanner({
-                    text: 'This shared list is not available on this device yet. Online sync is required.',
-                    type: 'missing',
-                  });
-                  return;
-                }
-                const fetched = data.data_json;
-                setLocations([fetched]);
-                setActiveLocationId(fetched.id);
-                setActiveSectorId(fetched.sectors?.[0]?.id || null);
-                setSharedListIds([fetched.id]);
-              })
-              .catch(() => {
-                setNotifBanner({
-                  text: 'Could not load shared list. Please try the invite link again.',
-                  type: 'missing',
-                });
-              })
-              .finally(() => {
-                clearTimeout(timeout);
-                setGuestLoading(false);
+              .single();
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('timeout')), 10000)
+            );
+            const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+            if (error || !data) {
+              setNotifBanner({
+                text: 'This shared list is not available on this device yet. Online sync is required.',
+                type: 'missing',
               });
-            return prev;
-          });
+            } else {
+              const fetched = data.data_json;
+              setLocations([fetched]);
+              setActiveLocationId(fetched.id);
+              setActiveSectorId(fetched.sectors?.[0]?.id || null);
+              setSharedListIds([fetched.id]);
+            }
+          } catch {
+            setNotifBanner({
+              text: 'Could not load shared list. Please try the invite link again.',
+              type: 'missing',
+            });
+          } finally {
+            setGuestLoading(false);
+          }
         }
 
         const key = role === 'writer' ? 'writers' : role === 'shopper' ? 'shoppers' : 'viewers';
@@ -312,7 +293,7 @@ export default function App() {
           return { ...prev, [key]: list };
         });
       } catch {
-        // silently ignore
+        setGuestLoading(false);
       }
     };
     applyGuestSession();
