@@ -1272,8 +1272,10 @@ function App() {
 
               <TouchableOpacity
                 onPress={() => {
-                  setActiveLocationId(loc.id);
-                  setActiveSectorId(null);
+                  if (activeLocationId !== loc.id) {
+                    setActiveLocationId(loc.id);
+                    setActiveSectorId(null);
+                  }
                 }}
                 style={[
                   styles.locationChip,
@@ -1289,13 +1291,11 @@ function App() {
                   {loc.name}
                 </Text>
 
+                {canEdit(mockRole) && (
                 <TouchableOpacity
                   onPress={(e) => {
                     e.stopPropagation();
-                    if (!canEdit(mockRole)) return;
-
                     setLocations(prev => prev.filter(l => l.id !== loc.id));
-
                     if (activeLocationId === loc.id) {
                       setActiveLocationId(null);
                       setActiveSectorId(null);
@@ -1313,6 +1313,7 @@ function App() {
                 >
                   <Text style={{ color: 'white', fontWeight: '900' }}>X</Text>
                 </TouchableOpacity>
+                )}
               </TouchableOpacity>
             </View>
           ))}
