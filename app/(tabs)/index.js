@@ -256,20 +256,27 @@ function App() {
   useEffect(() => {
     if (!showInviteBox || !activeLocation) return;
     const upsertSharedList = async () => {
+      const fullLocation = locations.find(loc => loc.id === activeLocation.id) || activeLocation;
+      const sectorsOk = Array.isArray(fullLocation.sectors) && fullLocation.sectors.length > 0;
+      const hasItems = sectorsOk && fullLocation.sectors.some(s => Array.isArray(s.items) && s.items.length > 0);
+      if (!sectorsOk) {
+        console.warn('[UPSERT-INVITE] blocked: sectors missing or empty', fullLocation.id);
+        return;
+      }
+      if (!hasItems) {
+        console.warn('[UPSERT-INVITE] blocked: all sectors have no items', fullLocation.id);
+        return;
+      }
       try {
-        console.log('[UPSERT-INVITE] id:', activeLocation.id);
-        console.log('[UPSERT-INVITE] name:', activeLocation.name);
-        console.log('[UPSERT-INVITE] sectors.length:', activeLocation.sectors?.length);
-        console.log('[UPSERT-INVITE] full payload:', JSON.stringify(activeLocation));
         await supabase.from('shared_lists').upsert({
-          id: activeLocation.id,
+          id: fullLocation.id,
           owner_id: user?.id || null,
-          name: activeLocation.name,
-          data_json: activeLocation,
+          name: fullLocation.name,
+          data_json: fullLocation,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'id' });
         setSharedListIds(prev =>
-          prev.includes(activeLocation.id) ? prev : [...prev, activeLocation.id]
+          prev.includes(fullLocation.id) ? prev : [...prev, fullLocation.id]
         );
       } catch {
         // silently ignore — invite still works locally
@@ -379,10 +386,16 @@ function App() {
     if (sharedListIds.length > 0) {
       locations.forEach(async loc => {
         if (!sharedListIds.includes(loc.id)) return;
-        console.log('[UPSERT-SYNC] id:', loc.id);
-        console.log('[UPSERT-SYNC] name:', loc.name);
-        console.log('[UPSERT-SYNC] sectors.length:', loc.sectors?.length);
-        console.log('[UPSERT-SYNC] full payload:', JSON.stringify(loc));
+        const sectorsOk = Array.isArray(loc.sectors) && loc.sectors.length > 0;
+        const hasItems = sectorsOk && loc.sectors.some(s => Array.isArray(s.items) && s.items.length > 0);
+        if (!sectorsOk) {
+          console.warn('[UPSERT-SYNC] blocked: sectors missing or empty', loc.id);
+          return;
+        }
+        if (!hasItems) {
+          console.warn('[UPSERT-SYNC] blocked: all sectors have no items', loc.id);
+          return;
+        }
         try {
           const { error } = await supabase.from('shared_lists').upsert({
             id: loc.id,
