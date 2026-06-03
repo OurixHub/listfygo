@@ -1585,6 +1585,21 @@ function App() {
 
                 </View>
 
+                {guestSession?.role === 'shopper' && (
+                  <View style={{ backgroundColor: '#1a0a2e', margin: 6, padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#7c3aed' }}>
+                    <Text style={{ color: '#a78bfa', fontSize: 11, fontWeight: '900', marginBottom: 4 }}>DEBUG items</Text>
+                    <Text style={{ color: '#e2e8f0', fontSize: 11 }}>items count: {visibleItems.length}</Text>
+                    <Text style={{ color: '#e2e8f0', fontSize: 10, marginTop: 4 }} numberOfLines={6}>
+                      raw: {JSON.stringify(sector.items)}
+                    </Text>
+                    {visibleItems.slice(0, 3).map((item, i) => (
+                      <Text key={i} style={{ color: '#94a3b8', fontSize: 11, marginTop: 4 }}>
+                        [{i}] id={String(item.id)} name={String(item.name)} status={String(item.status)}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+
                 {visibleItems.map((item) => (
                   <View
                     key={item.id}
