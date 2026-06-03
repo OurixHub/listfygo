@@ -106,6 +106,10 @@ function App() {
       if (rawGuest) {
         try { setGuestSession(JSON.parse(rawGuest)); } catch {}
       }
+      const rawInviteStatus = await AsyncStorage.getItem('listfygo_invite_status');
+      if (rawInviteStatus) {
+        try { setInviteStatus(JSON.parse(rawInviteStatus)); } catch {}
+      }
       setAppReady(true);
     };
 
@@ -170,6 +174,7 @@ function App() {
   const [guestLoading, setGuestLoading] = useState(false);
   const [guestError, setGuestError] = useState(null);
   const [appReady, setAppReady] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState({});
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState('login');
@@ -268,6 +273,20 @@ function App() {
     };
     upsertSharedList();
   }, [showInviteBox]);
+
+  // Mark invite role as Pending when invite panel opens (owner side)
+  useEffect(() => {
+    if (!showInviteBox || !inviteRole || !activeLocationId) return;
+    setInviteStatus(prev => {
+      if (prev[activeLocationId]?.[inviteRole] === 'Connected') return prev;
+      const updated = {
+        ...prev,
+        [activeLocationId]: { ...prev[activeLocationId], [inviteRole]: 'Pending' },
+      };
+      AsyncStorage.setItem('listfygo_invite_status', JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
+  }, [showInviteBox, inviteRole, activeLocationId]);
 
   // Load guestSession and apply role/list on mount
   useEffect(() => {
@@ -1010,6 +1029,21 @@ function App() {
           </TouchableOpacity>
 
         </View>
+
+        {mockRole === 'owner' && activeLocationId && inviteStatus[activeLocationId] && (
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 6, gap: 8 }}>
+            {[['W', 'writer'], ['S', 'shopper'], ['V', 'viewer']].map(([abbr, role]) => {
+              const status = inviteStatus[activeLocationId]?.[role];
+              if (!status) return null;
+              return (
+                <Text key={role} style={{ fontSize: 11, fontWeight: '800', color: status === 'Connected' ? '#22c55e' : '#94a3b8' }}>
+                  {abbr}: {status}
+                </Text>
+              );
+            })}
+          </View>
+        )}
+
         {showMenu && (
           <View style={styles.menuDropdown}>
 

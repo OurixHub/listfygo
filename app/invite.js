@@ -21,6 +21,13 @@ export default function InviteScreen() {
         acceptedAt: new Date().toISOString(),
       })
     );
+    try {
+      const rawStatus = await AsyncStorage.getItem('listfygo_invite_status');
+      const statusMap = rawStatus ? JSON.parse(rawStatus) : {};
+      if (!statusMap[listId]) statusMap[listId] = {};
+      statusMap[listId][role] = 'Connected';
+      await AsyncStorage.setItem('listfygo_invite_status', JSON.stringify(statusMap));
+    } catch {}
     router.replace('/');
   };
 
