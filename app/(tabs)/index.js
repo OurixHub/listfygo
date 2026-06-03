@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import { Component, useEffect, useMemo, useState } from 'react';
+import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -202,6 +202,7 @@ function App() {
   const [inviteRole, setInviteRole] = useState(null);
   const [showInviteBox, setShowInviteBox] = useState(false);
   const [sharedListIds, setSharedListIds] = useState([]);
+  const itemSyncDebounce = useRef({});
   const [showInviteFeedback, setShowInviteFeedback] = useState(false);
   const [inviteFeedbackDraft, setInviteFeedbackDraft] = useState('');
   const [showSharingCenter, setShowSharingCenter] = useState(false);
@@ -278,6 +279,28 @@ function App() {
         setSharedListIds(prev =>
           prev.includes(fullLocation.id) ? prev : [...prev, fullLocation.id]
         );
+        // Step 1: sync sectors and items
+        const sectorRows = fullLocation.sectors.map((s, i) => ({
+          id: s.id, shared_list_id: fullLocation.id,
+          name: s.label || s.key, key: s.key,
+          color: s.color || '#64748b', position: i,
+        }));
+        await supabase.from('sectors').upsert(sectorRows, { onConflict: 'id' });
+        const itemRows = [];
+        fullLocation.sectors.forEach(s => {
+          (s.items || []).forEach(item => {
+            itemRows.push({
+              id: item.id, sector_id: s.id, shared_list_id: fullLocation.id,
+              name: item.name, qty: item.qty || 1, price: item.price || '',
+              unit_type: item.unitType || 'unit', price_per_kg: item.pricePerKg || '',
+              weight: item.weight || '', status: item.status || 'pending',
+              description: item.description || '',
+            });
+          });
+        });
+        if (itemRows.length > 0) {
+          await supabase.from('items').upsert(itemRows, { onConflict: 'id' });
+        }
       } catch {
         // silently ignore — invite still works locally
       }
@@ -466,7 +489,8 @@ function App() {
       price: '',
       unitType: 'unit',
       pricePerKg: '',
-      weight: ''
+      weight: '',
+      status: 'pending',
     };
 
     setLocations((prev) =>
@@ -489,6 +513,21 @@ function App() {
 
     clearDraft();
     logAction(`${name} added`);
+    if (sharedListIds.includes(activeLocationId)) {
+      supabase.from('items').insert({
+        id: newItem.id,
+        list_id: activeLocationId,
+        sector_id: activeSectorId,
+        name: newItem.name,
+        description: newItem.description || '',
+        qty: newItem.qty,
+        status: 'pending',
+        unit_type: newItem.unitType,
+        price: newItem.price || '',
+        price_per_kg: newItem.pricePerKg || '',
+        weight: newItem.weight || '',
+      }).catch(() => {});
+    }
   };
 
   const sendReplacement = (locationId, sectorId, missingItem) => {
@@ -599,6 +638,38 @@ function App() {
         };
       })
     );
+    if (sharedListIds.includes(locationId)) {
+      const loc = locations.find(l => l.id === locationId);
+      const sec = loc?.sectors.find(s => s.id === sectorId);
+      const cur = sec?.items.find(i => i.id === itemId);
+      if (cur) {
+        const merged = cur.unitType === 'weight'
+          ? recalcWeightItem(cur, changes)
+          : { ...cur, ...changes };
+        const row = {
+          id: itemId,
+          list_id: locationId,
+          sector_id: sectorId,
+          name: merged.name,
+          description: merged.description || '',
+          qty: merged.qty || 1,
+          status: merged.status || 'pending',
+          unit_type: merged.unitType || 'unit',
+          price: merged.price || '',
+          price_per_kg: merged.pricePerKg || '',
+          weight: merged.weight || '',
+        };
+        const immediate = 'status' in changes || 'name' in changes || 'qty' in changes;
+        clearTimeout(itemSyncDebounce.current[itemId]);
+        if (immediate) {
+          supabase.from('items').upsert(row, { onConflict: 'id' }).catch(() => {});
+        } else {
+          itemSyncDebounce.current[itemId] = setTimeout(() => {
+            supabase.from('items').upsert(row, { onConflict: 'id' }).catch(() => {});
+          }, 500);
+        }
+      }
+    }
   };
 
   const deleteItem = (locationId, sectorId, itemId) => {
@@ -1443,6 +1514,15 @@ function App() {
 
                 setActiveSectorId(newSector.id);
                 setNewSectorName('');
+                if (sharedListIds.includes(activeLocation.id)) {
+                  supabase.from('sectors').upsert({
+                    id: newSector.id,
+                    list_id: activeLocation.id,
+                    label: newSector.label,
+                    color: newSector.color,
+                    sort_order: activeLocation.sectors?.length || 0,
+                  }, { onConflict: 'id' }).catch(() => {});
+                }
               }}
             >
               <Text style={{ color: 'white', fontWeight: '700' }}>
@@ -1453,26 +1533,12 @@ function App() {
           </View>
           )}
 
-          {guestSession?.role === 'shopper' && (
-            <View style={{ backgroundColor: '#0f1f38', margin: 10, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#1e3a5f' }}>
-              <Text style={{ color: '#facc15', fontSize: 11, fontWeight: '900', marginBottom: 4 }}>DEBUG</Text>
-              <Text style={{ color: '#e2e8f0', fontSize: 11 }}>activeLocationId: {String(activeLocationId)}</Text>
-              <Text style={{ color: '#e2e8f0', fontSize: 11 }}>activeSectorId: {String(activeSectorId)}</Text>
-              <Text style={{ color: '#e2e8f0', fontSize: 11 }}>sectors count: {activeLocation.sectors.length}</Text>
-              {activeLocation.sectors.map((s, i) => (
-                <Text key={i} style={{ color: s.id === activeSectorId ? '#22c55e' : '#94a3b8', fontSize: 11 }}>
-                  [{i}] id={String(s.id)} name={s.label || s.key} {s.id === activeSectorId ? '← ACTIVE' : ''}
-                </Text>
-              ))}
-            </View>
-          )}
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectorBar}>
             {activeLocation.sectors.map((sector) => (
               <TouchableOpacity
                 key={sector.id}
                 onPress={() => {
-                  Alert.alert('DEBUG tap', `Tapped sector: ${sector.id}\nactiveSectorId before: ${activeSectorId}`);
                   setActiveSectorId(sector.id);
                 }}
                 style={[
@@ -1605,25 +1671,11 @@ function App() {
                   <View style={[styles.sectorLine, { backgroundColor: sector.color }]} />
 
                   <Text style={styles.sectorTitle}>
-                    sector.label || t.sectors?.[sector.key] || sector.key
+                    {sector.label || t.sectors?.[sector.key] || sector.key}
                   </Text>
 
                 </View>
 
-                {guestSession?.role === 'shopper' && (
-                  <View style={{ backgroundColor: '#1a0a2e', margin: 6, padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#7c3aed' }}>
-                    <Text style={{ color: '#a78bfa', fontSize: 11, fontWeight: '900', marginBottom: 4 }}>DEBUG items</Text>
-                    <Text style={{ color: '#e2e8f0', fontSize: 11 }}>items count: {visibleItems.length}</Text>
-                    <Text style={{ color: '#e2e8f0', fontSize: 10, marginTop: 4 }} numberOfLines={6}>
-                      raw: {JSON.stringify(sector.items)}
-                    </Text>
-                    {visibleItems.slice(0, 3).map((item, i) => (
-                      <Text key={i} style={{ color: '#94a3b8', fontSize: 11, marginTop: 4 }}>
-                        [{i}] id={String(item.id)} name={String(item.name)} status={String(item.status)}
-                      </Text>
-                    ))}
-                  </View>
-                )}
 
                 {visibleItems.map((item) => (
                   <View
