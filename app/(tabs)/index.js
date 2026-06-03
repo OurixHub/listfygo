@@ -257,6 +257,10 @@ function App() {
     if (!showInviteBox || !activeLocation) return;
     const upsertSharedList = async () => {
       try {
+        console.log('[UPSERT-INVITE] id:', activeLocation.id);
+        console.log('[UPSERT-INVITE] name:', activeLocation.name);
+        console.log('[UPSERT-INVITE] sectors.length:', activeLocation.sectors?.length);
+        console.log('[UPSERT-INVITE] full payload:', JSON.stringify(activeLocation));
         await supabase.from('shared_lists').upsert({
           id: activeLocation.id,
           owner_id: user?.id || null,
@@ -317,6 +321,10 @@ function App() {
               console.error('[guestSession] fetch failed or data_json missing', { error, data });
               setGuestError('This shared list is not available. Try the invite link again.');
             } else {
+              console.log('[FETCH] data_json.id:', data.data_json.id);
+              console.log('[FETCH] data_json.name:', data.data_json.name);
+              console.log('[FETCH] data_json.sectors?.length:', data.data_json.sectors?.length);
+              console.log('[FETCH] full data_json:', JSON.stringify(data.data_json));
               const raw = data.data_json;
               const fetched = {
                 ...raw,
@@ -371,6 +379,10 @@ function App() {
     if (sharedListIds.length > 0) {
       locations.forEach(async loc => {
         if (!sharedListIds.includes(loc.id)) return;
+        console.log('[UPSERT-SYNC] id:', loc.id);
+        console.log('[UPSERT-SYNC] name:', loc.name);
+        console.log('[UPSERT-SYNC] sectors.length:', loc.sectors?.length);
+        console.log('[UPSERT-SYNC] full payload:', JSON.stringify(loc));
         try {
           const { error } = await supabase.from('shared_lists').upsert({
             id: loc.id,
