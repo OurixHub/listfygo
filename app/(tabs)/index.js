@@ -1428,11 +1428,28 @@ function App() {
           </View>
           )}
 
+          {guestSession?.role === 'shopper' && (
+            <View style={{ backgroundColor: '#0f1f38', margin: 10, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#1e3a5f' }}>
+              <Text style={{ color: '#facc15', fontSize: 11, fontWeight: '900', marginBottom: 4 }}>DEBUG</Text>
+              <Text style={{ color: '#e2e8f0', fontSize: 11 }}>activeLocationId: {String(activeLocationId)}</Text>
+              <Text style={{ color: '#e2e8f0', fontSize: 11 }}>activeSectorId: {String(activeSectorId)}</Text>
+              <Text style={{ color: '#e2e8f0', fontSize: 11 }}>sectors count: {activeLocation.sectors.length}</Text>
+              {activeLocation.sectors.map((s, i) => (
+                <Text key={i} style={{ color: s.id === activeSectorId ? '#22c55e' : '#94a3b8', fontSize: 11 }}>
+                  [{i}] id={String(s.id)} name={s.label || s.key} {s.id === activeSectorId ? '← ACTIVE' : ''}
+                </Text>
+              ))}
+            </View>
+          )}
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectorBar}>
             {activeLocation.sectors.map((sector) => (
               <TouchableOpacity
                 key={sector.id}
-                onPress={() => setActiveSectorId(sector.id)}
+                onPress={() => {
+                  Alert.alert('DEBUG tap', `Tapped sector: ${sector.id}\nactiveSectorId before: ${activeSectorId}`);
+                  setActiveSectorId(sector.id);
+                }}
                 style={[
                   styles.sectorChip,
                   {
