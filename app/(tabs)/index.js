@@ -350,15 +350,20 @@ function App() {
 
     // Sync any shared lists back to Supabase
     if (sharedListIds.length > 0) {
-      locations.forEach(loc => {
+      locations.forEach(async loc => {
         if (!sharedListIds.includes(loc.id)) return;
-        supabase.from('shared_lists').upsert({
-          id: loc.id,
-          owner_id: user?.id || null,
-          name: loc.name,
-          data_json: loc,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' }).catch(() => { });
+        try {
+          const { error } = await supabase.from('shared_lists').upsert({
+            id: loc.id,
+            owner_id: user?.id || null,
+            name: loc.name,
+            data_json: loc,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+          if (error) console.error(error);
+        } catch (err) {
+          console.error(err);
+        }
       });
     }
   }, [locations, receipts]);
