@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useMemo, useState } from 'react';
+import { Component, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -53,7 +53,35 @@ const LOCATION_COLORS = [
   '#64748b',
 ];
 
-export default function App() {
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null, info: null };
+  }
+  componentDidCatch(error, info) {
+    this.setState({ error, info });
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <ScrollView style={{ flex: 1, backgroundColor: '#071120', padding: 24, paddingTop: 60 }}>
+          <Text style={{ color: '#ef4444', fontSize: 18, fontWeight: '900', marginBottom: 16 }}>
+            ShopLink crashed
+          </Text>
+          <Text style={{ color: '#fca5a5', fontSize: 13, fontWeight: '700', marginBottom: 12 }}>
+            {this.state.error.message}
+          </Text>
+          <Text style={{ color: '#94a3b8', fontSize: 11, fontFamily: 'monospace' }}>
+            {this.state.info?.componentStack}
+          </Text>
+        </ScrollView>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function App() {
 
   const [lang, setLang] = useState('en');
   const t = translations?.[lang] || translations.en;
@@ -2750,6 +2778,14 @@ export default function App() {
       )}
 
     </ScrollView >
+  );
+}
+
+export default function WrappedApp() {
+  return (
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   );
 }
 
